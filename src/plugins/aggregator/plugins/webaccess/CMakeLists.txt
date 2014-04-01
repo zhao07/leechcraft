@@ -12,11 +12,15 @@ set (WEBACCESS_SRCS
 	servermanager.cpp
 	aggregatorapp.cpp
 	readchannelsfilter.cpp
+	readitemsfilter.cpp
 	q2wproxymodel.cpp
 	util.cpp
 	serverupdater.cpp
 	xmlsettingsmanager.cpp
 	)
+
+CreateTrs ("aggregator_webaccess" "en;ru_RU" WEBACCESS_COMPILED_TRANSLATIONS)
+CreateTrsUpTarget ("aggregator_webaccess" "en;ru_RU" "${WEBACCESS_SRCS}" "" "aggregatorwebaccesssettings.xml")
 
 add_library (leechcraft_aggregator_webaccess SHARED
 	${WEBACCESS_COMPILED_TRANSLATIONS}

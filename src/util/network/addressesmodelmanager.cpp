@@ -31,15 +31,16 @@
 #include <QStandardItemModel>
 #include <QNetworkInterface>
 #include <xmlsettingsdialog/datasourceroles.h>
-#include "xmlsettingsmanager.h"
+#include <xmlsettingsdialog/basesettingsmanager.h>
 
 namespace LeechCraft
 {
-namespace HttHare
+namespace Util
 {
-	AddressesModelManager::AddressesModelManager (QObject *parent)
+	AddressesModelManager::AddressesModelManager (BaseSettingsManager *bsm, int defaultPort, QObject *parent)
 	: QObject { parent }
 	, Model_ { new QStandardItemModel { this } }
+	, BSM_ { bsm }
 	{
 		Model_->setHorizontalHeaderLabels ({ tr ("Host"), tr ("Port") });
 		Model_->horizontalHeaderItem (0)->setData (DataSources::DataFieldType::Enum,
@@ -64,13 +65,20 @@ namespace HttHare
 			if (std::any_of (std::begin (locals), std::end (locals),
 					[&addr] (decltype (*std::begin (locals)) subnet)
 						{ return addr.isInSubnet (subnet); }))
-				defaultAddrs.push_back ({ addr.toString (), "14801" });
+				defaultAddrs.push_back ({ addr.toString (), QString::number (defaultPort) });
 		}
 
-		const auto& addrs = XmlSettingsManager::Instance ().Property ("ListenAddresses",
+		const auto& addrs = BSM_->Property ("ListenAddresses",
 				QVariant::fromValue (defaultAddrs)).value<AddrList_t> ();
+		qDebug () << Q_FUNC_INFO << addrs;
 		for (const auto& addr : addrs)
 			AppendRow (addr);
+	}
+
+	void AddressesModelManager::RegisterTypes ()
+	{
+		qRegisterMetaType<AddrList_t> ("LeechCraft::Util::AddrList_t");
+		qRegisterMetaTypeStreamOperators<AddrList_t> ();
 	}
 
 	QAbstractItemModel* AddressesModelManager::GetModel () const
@@ -90,9 +98,9 @@ namespace HttHare
 		return addresses;
 	}
 
-	void AddressesModelManager::SaveSettings ()
+	void AddressesModelManager::SaveSettings () const
 	{
-		XmlSettingsManager::Instance ().setProperty ("ListenAddresses",
+		BSM_->setProperty ("ListenAddresses",
 				QVariant::fromValue (GetAddresses ()));
 	}
 

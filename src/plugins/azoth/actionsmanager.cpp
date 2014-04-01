@@ -352,6 +352,36 @@ namespace Azoth
 				qobject_cast<IMUCEntry*> (entry->GetQObject ())->SetNick (newNick);
 		}
 
+		void InviteToMuc (ICLEntry *entry)
+		{
+			QList<QObject*> mucObjs;
+
+			const auto account = qobject_cast<IAccount*> (entry->GetParentAccount ());
+			for (const auto entryObj : account->GetCLEntries ())
+				if (qobject_cast<ICLEntry*> (entryObj)->GetEntryType () == ICLEntry::ETMUC)
+					mucObjs << entryObj;
+
+			if (mucObjs.isEmpty ())
+				return;
+
+			MUCInviteDialog dia (account, MUCInviteDialog::ListType::ListMucs);
+			if (dia.exec () != QDialog::Accepted)
+				return;
+
+			const auto mucEntryObj = FindByHRId (account, dia.GetID ());
+			const auto mucEntry = qobject_cast<IMUCEntry*> (mucEntryObj);
+			if (!mucEntry)
+			{
+				qWarning () << Q_FUNC_INFO
+						<< "no MUC for"
+						<< dia.GetID ();
+				return;
+			}
+
+			const auto& msg = dia.GetInviteMessage ();
+			mucEntry->InviteToMUC (entry->GetHumanReadableID (), msg);
+		}
+
 		void Invite (ICLEntry *entry)
 		{
 			auto mucEntry = qobject_cast<IMUCEntry*> (entry->GetQObject ());
@@ -597,10 +627,11 @@ namespace Azoth
 						QApplication::clipboard ()->setText (id, QClipboard::Clipboard);
 					})
 			},
+			{ "inviteToMuc", SingleEntryActor_f (InviteToMuc) },
 			{ "vcard", SingleEntryActor_f ([] (ICLEntry *e) { e->ShowInfo (); }) },
+			{ "sep_beforemuc", {} },
 			{ "changenick", MultiEntryActor_f (ChangeNick) },
 			{ "invite", SingleEntryActor_f (Invite) },
-			{ "leave", SingleEntryActor_f (Leave) },
 			{ "reconnect", SingleEntryActor_f (Reconnect) },
 			{
 				"addtobm",
@@ -621,6 +652,7 @@ namespace Azoth
 						tab->ShowUsersList ();
 					})
 			},
+			{ "leave", SingleEntryActor_f (Leave) },
 			{ "authorize", SingleEntryActor_f (AuthorizeEntry) },
 			{ "denyauth", SingleEntryActor_f (DenyAuthForEntry) }
 		};
@@ -673,7 +705,8 @@ namespace Azoth
 		Util::DefaultHookProxy_ptr proxy (new Util::DefaultHookProxy);
 		proxy->SetReturnValue (QVariantList ());
 		emit hookEntryActionsRequested (proxy, entry->GetQObject ());
-		Q_FOREACH (const QVariant& var, proxy->GetReturnValue ().toList ())
+
+		for (const auto& var : proxy->GetReturnValue ().toList ())
 		{
 			QObject *obj = var.value<QObject*> ();
 			QAction *act = qobject_cast<QAction*> (obj);
@@ -684,7 +717,7 @@ namespace Azoth
 
 			proxy.reset (new Util::DefaultHookProxy);
 			emit hookEntryActionAreasRequested (proxy, act, entry->GetQObject ());
-			Q_FOREACH (const QString& place, proxy->GetReturnValue ().toStringList ())
+			for (const auto& place : proxy->GetReturnValue ().toStringList ())
 			{
 				if (place == "contactListContextMenu")
 					Action2Areas_ [act] << CLEAAContactListCtxtMenu;
@@ -1021,6 +1054,10 @@ namespace Azoth
 
 		if (entry->GetEntryType () != ICLEntry::ETMUC)
 		{
+			auto inviteTo = new QAction (tr ("Invite to a MUC..."), entry->GetQObject ());
+			Entry2Actions_ [entry] ["inviteToMuc"] = inviteTo;
+			Action2Areas_ [inviteTo] << CLEAAContactListCtxtMenu;
+
 			QAction *vcard = new QAction (tr ("VCard"), entry->GetQObject ());
 			vcard->setProperty ("ActionIcon", "text-x-vcard");
 			Entry2Actions_ [entry] ["vcard"] = vcard;
@@ -1108,6 +1145,10 @@ namespace Azoth
 		}
 		else if (entry->GetEntryType () == ICLEntry::ETMUC)
 		{
+			auto sepBeforeMuc = Util::CreateSeparator (entry->GetQObject ());
+			Entry2Actions_ [entry] ["sep_beforemuc"] = sepBeforeMuc;
+			Action2Areas_ [sepBeforeMuc] << CLEAAContactListCtxtMenu;
+
 			QAction *changeNick = new QAction (tr ("Change nickname..."), entry->GetQObject ());
 			changeNick->setProperty ("ActionIcon", "user-properties");
 			Entry2Actions_ [entry] ["changenick"] = changeNick;
@@ -1239,6 +1280,15 @@ namespace Azoth
 					account->GetAccountFeatures () & IAccount::FCanViewContactsInfoInOffline ||
 					isOnline;
 			Entry2Actions_ [entry] ["vcard"]->setEnabled (enableVCard);
+
+			const auto& allEntries = account->GetCLEntries ();
+			const auto hasMucs = std::any_of (allEntries.begin (), allEntries.end (),
+					[] (QObject *entryObj)
+					{
+						return qobject_cast<ICLEntry*> (entryObj)->GetEntryType () == ICLEntry::ETMUC;
+					});
+
+			Entry2Actions_ [entry] ["inviteToMuc"]->setEnabled (hasMucs);
 		}
 
 		Entry2Actions_ [entry] ["rename"]->setEnabled (entry->GetEntryFeatures () & ICLEntry::FSupportsRenames);

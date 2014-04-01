@@ -29,9 +29,12 @@
 
 #pragma once
 
+#include <functional>
 #include <QObject>
 
 typedef struct _GstElement GstElement;
+typedef struct _GstMessage GstMessage;
+typedef struct _GstBus GstBus;
 
 namespace LeechCraft
 {
@@ -40,6 +43,8 @@ namespace LMP
 	class SourceObject;
 	class Output;
 	struct CallbackData;
+
+	typedef std::function<int (GstBus*, GstMessage*)> SyncHandler_f;
 
 	class Path : public QObject
 	{
@@ -60,6 +65,13 @@ namespace LMP
 		};
 
 		friend struct CallbackData;
+
+		struct QueueItem
+		{
+			GstElement *Elem_;
+			Action Act_;
+		};
+		QList<QueueItem> Queue_;
 	public:
 		Path (SourceObject*, Output*, QObject* = 0);
 		~Path ();
@@ -75,12 +87,14 @@ namespace LMP
 
 		SourceObject* GetSourceObject () const;
 
+		void AddSyncHandler (const SyncHandler_f&);
+
 		void InsertElement (GstElement*);
 		void RemoveElement (GstElement*);
 
 		void FinalizeAction (CallbackData*);
 	private:
-		void Perform (GstElement*, Action);
+		void RotateQueue ();
 	};
 }
 }

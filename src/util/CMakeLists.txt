@@ -47,7 +47,9 @@ set (SRCS
 	models/listmodel.cpp
 	models/mergemodel.cpp
 	models/modeliterator.cpp
+	models/modelitem.cpp
 	models/treeitem.cpp
+	network/addressesmodelmanager.cpp
 	network/customcookiejar.cpp
 	network/customnetworkreply.cpp
 	network/networkdiskcache.cpp

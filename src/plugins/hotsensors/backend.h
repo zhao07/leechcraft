@@ -30,40 +30,21 @@
 #pragma once
 
 #include <QObject>
-#include <QVariantList>
-#include <QModelIndexList>
-
-class QStandardItemModel;
-class QStandardItem;
+#include "structures.h"
 
 namespace LeechCraft
 {
-namespace HttHare
+namespace HotSensors
 {
-	typedef QList<QPair<QString, QString>> AddrList_t;
-
-	class AddressesModelManager : public QObject
+	class Backend : public QObject
 	{
 		Q_OBJECT
-
-		QStandardItemModel * const Model_;
 	public:
-		AddressesModelManager (QObject* = 0);
-
-		QAbstractItemModel* GetModel () const;
-		AddrList_t GetAddresses () const;
-	private:
-		void SaveSettings ();
-		void AppendRow (const QPair<QString, QString>&);
-	private slots:
-		void updateAvailInterfaces ();
+		Backend (QObject* = nullptr);
 	public slots:
-		void addRequested (const QString&, const QVariantList&);
-		void removeRequested (const QString&, const QModelIndexList&);
+		virtual void update () = 0;
 	signals:
-		void addressesChanged ();
+		void gotReadings (const Readings_t&);
 	};
 }
 }
-
-Q_DECLARE_METATYPE (LeechCraft::HttHare::AddrList_t)

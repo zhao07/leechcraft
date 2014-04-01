@@ -27,68 +27,49 @@
  * DEALINGS IN THE SOFTWARE.
  **********************************************************************/
 
-#include "entitychecker.h"
-#include <QApplication>
-#include <QTextCodec>
-#include <QFileInfo>
-#include <QUrl>
-#include <interfaces/structures.h>
-#include "phonon.h"
-#include "xmlsettingsmanager.h"
+#pragma once
+
+#include <QObject>
+#include <QVariantList>
+#include <QModelIndexList>
+#include <util/utilconfig.h>
+
+class QStandardItemModel;
+class QStandardItem;
 
 namespace LeechCraft
 {
-namespace LMP
+namespace Util
 {
-	EntityChecker::EntityChecker (const LeechCraft::Entity& e)
-	: Result_ (false)
-	, Break_ (false)
+	class BaseSettingsManager;
+
+	typedef QList<QPair<QString, QString>> AddrList_t;
+
+	class UTIL_API AddressesModelManager : public QObject
 	{
-		struct MimeChecker
-		{
-			bool operator () (const QString& mime)
-			{
-				if (mime == "application/ogg")
-					return true;
-				if (mime.startsWith ("audio/"))
-					return true;
-				if (mime.startsWith ("video/"))
-					return true;
-				return false;
-			}
-		};
+		Q_OBJECT
 
-		if (e.Entity_.canConvert<QNetworkReply*> () &&
-				MimeChecker () (e.Mime_))
-		{
-			Result_ = true;
-			return;
-		}
-		if (e.Entity_.canConvert<QIODevice*> () &&
-				e.Mime_ == "x-leechcraft/media-qiodevice")
-		{
-			Result_ = true;
-			return;
-		}
-		if (e.Entity_.canConvert<QUrl> ())
-		{
-			QUrl url = e.Entity_.toUrl ();
-			QString extension = QFileInfo (url.path ()).suffix ();
+		QStandardItemModel * const Model_;
+		BaseSettingsManager * const BSM_;
+	public:
+		AddressesModelManager (BaseSettingsManager*, int defaultPort, QObject* = 0);
 
-			QStringList goodExt = XmlSettingsManager::Instance ()->
-				property ("TestExtensions").toString ()
-				.split (' ', QString::SkipEmptyParts);
+		static void RegisterTypes ();
 
-			Result_ = goodExt.contains (extension);
-			return;
-		}
-
-		Result_ = false;
-	}
-
-	bool EntityChecker::Can () const
-	{
-		return Result_;
-	}
+		QAbstractItemModel* GetModel () const;
+		AddrList_t GetAddresses () const;
+	private:
+		void SaveSettings () const;
+		void AppendRow (const QPair<QString, QString>&);
+	private Q_SLOTS:
+		void updateAvailInterfaces ();
+	public Q_SLOTS:
+		void addRequested (const QString&, const QVariantList&);
+		void removeRequested (const QString&, const QModelIndexList&);
+	Q_SIGNALS:
+		void addressesChanged ();
+	};
 }
 }
+
+Q_DECLARE_METATYPE (LeechCraft::Util::AddrList_t)

@@ -160,6 +160,19 @@ namespace LMP
 				SLOT (handleTick ()));
 		timer->start (1000);
 
+		gst_bus_set_sync_handler (gst_pipeline_get_bus (GST_PIPELINE (Dec_)),
+				[] (GstBus *bus, GstMessage *msg, gpointer udata)
+				{
+					return static_cast<GstBusSyncReply> (static_cast<SourceObject*> (udata)->
+								HandleSyncMessage (bus, msg));
+				},
+#if GST_VERSION_MAJOR < 1
+				this);
+#else
+				this,
+				nullptr);
+#endif
+
 		PopThread_->start (QThread::LowestPriority);
 	}
 
@@ -341,6 +354,8 @@ namespace LMP
 
 		auto path = source.ToUrl ().toEncoded ();
 		g_object_set (G_OBJECT (Dec_), "uri", path.constData (), nullptr);
+
+		NextSource_.Clear ();
 	}
 
 	void SourceObject::PrepareNextSource (const AudioSource& source)
@@ -366,7 +381,6 @@ namespace LMP
 				return;
 
 			SetCurrentSource (NextSource_);
-			NextSource_.Clear ();
 		}
 
 		gst_element_set_state (Path_->GetPipeline (), GST_STATE_PLAYING);
@@ -421,7 +435,6 @@ namespace LMP
 		}
 
 		SetCurrentSource (NextSource_);
-		NextSource_.Clear ();
 	}
 
 	void SourceObject::SetupSource ()
@@ -473,6 +486,11 @@ namespace LMP
 	void SourceObject::SetSink (GstElement *bin)
 	{
 		g_object_set (GST_OBJECT (Dec_), "audio-sink", bin, nullptr);
+	}
+
+	void SourceObject::AddSyncHandler (const SyncHandler_f& handler)
+	{
+		SyncHandlers_ << handler;
 	}
 
 	void SourceObject::HandleErrorMsg (GstMessage *msg)
@@ -667,6 +685,18 @@ namespace LMP
 
 	void SourceObject::HandleStreamStatusMsg (GstMessage*)
 	{
+	}
+
+	int SourceObject::HandleSyncMessage (GstBus *bus, GstMessage *msg)
+	{
+		for (const auto& handler : SyncHandlers_)
+		{
+			const auto res = handler (bus, msg);
+			if (res == GST_BUS_DROP)
+				return res;
+		}
+
+		return GST_BUS_PASS;
 	}
 
 	void SourceObject::handleMessage (GstMessage_ptr msgPtr)

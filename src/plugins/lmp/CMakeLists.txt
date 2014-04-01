@@ -112,6 +112,9 @@ set (SRCS
 	recursivedirwatcher.cpp
 	rganalysismanager.cpp
 	rgfiltercontroller.cpp
+	collectionsmanager.cpp
+	collectionwidget.cpp
+	localcollectionmodel.cpp
 	engine/audiosource.cpp
 	engine/filterelement.cpp
 	engine/gstutil.cpp
@@ -120,6 +123,8 @@ set (SRCS
 	engine/pathelement.cpp
 	engine/rganalyser.cpp
 	engine/rgfilter.cpp
+	engine/httpstreamfilter.cpp
+	engine/httpserver.cpp
 	engine/sourceobject.cpp
 	sync/cloudwidget.cpp
 	sync/clouduploadmanager.cpp
@@ -163,6 +168,7 @@ set (FORMS
 	volumeslider.ui
 	seekslider.ui
 	radiocustomdialog.ui
+	collectionwidget.ui
 	sync/cloudwidget.ui
 	sync/devicesbrowserwidget.ui
 	sync/transcodingparamswidget.ui

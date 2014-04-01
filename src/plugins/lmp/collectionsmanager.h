@@ -27,28 +27,39 @@
  * DEALINGS IN THE SOFTWARE.
  **********************************************************************/
 
-#ifndef PLUGINS_LMP_ENTITYCHECKER_H
-#define PLUGINS_LMP_ENTITYCHECKER_H
-#include <memory>
+#pragma once
+
 #include <QObject>
+
+class QModelIndex;
+class QAbstractItemModel;
+class QStandardItemModel;
+class QSortFilterProxyModel;
 
 namespace LeechCraft
 {
-	struct Entity;
-
+namespace Util
+{
+	class MergeModel;
+}
 namespace LMP
 {
-	class EntityChecker : public QObject
+	class Player;
+
+	class CollectionsManager : public QObject
 	{
 		Q_OBJECT
 
-		bool Result_;
-		bool Break_;
+		Util::MergeModel * const Model_;
+		QSortFilterProxyModel * const Sorter_;
 	public:
-		EntityChecker (const LeechCraft::Entity&);
-		bool Can () const;
+		CollectionsManager (QObject* = nullptr);
+
+		void Add (QAbstractItemModel*);
+
+		QAbstractItemModel* GetModel () const;
+
+		void Enqueue (const QList<QModelIndex>&, Player*);
 	};
 }
 }
-
-#endif
